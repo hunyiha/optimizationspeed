@@ -18,4 +18,8 @@ public interface UserService {
     List<Integer> idList();
 
     User selectUserById(Integer id);
+
+    List<UserVo> getListUserVo1();
+
+    UserVo getUserVoInfo(Integer id);
 }

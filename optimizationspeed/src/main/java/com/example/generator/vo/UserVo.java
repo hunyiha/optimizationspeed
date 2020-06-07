@@ -9,7 +9,7 @@ import com.example.generator.po.User;
  * @create: 2020-06-04 21:22
  **/
 public class UserVo extends User {
-    private volatile int ageNum;
+    private  int ageNum;
 
     public int getAgeNum() {
         return ageNum;

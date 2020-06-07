@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,13 +56,23 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public List<UserVo> getListUserVo() {
+    public List<UserVo> getListUserVo(){
         List<Integer> ids = idList();
         List<UserVo> listUserVo = new ArrayList<>();
+        CountDownLatch countDownLatch = new CountDownLatch(ids.size());
         for (Integer id : ids) {
-            UserVo userVoInfo = getUserVoInfo(id);
-            listUserVo.add(userVoInfo);
+            executorService.execute(()->{
+                UserVo userVoInfo = getUserVoInfo(id);
+                listUserVo.add(userVoInfo);
+                countDownLatch.countDown();
+            });
         }
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Collections.sort(listUserVo,(o1,o2)->{return o1.getId()-o2.getId();});
         return listUserVo;
     }
 
@@ -77,31 +88,52 @@ public class UserServiceImpl implements UserService {
         return userMapper.selectByPrimaryKey(id);
     }
 
-    public UserVo getUserVoInfo(Integer id){
+    @Override
+    public UserVo getUserVoInfo(Integer id) {
         List<User> users = listUser();
         User userById = selectUserById(id);
         UserVo userVo = new UserVo();
-        final CountDownLatch latch= new CountDownLatch(users.size());//使用java并发库concurrent
+
+        for (User user : users) {
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            userVo.setAgeNum(userVo.getAgeNum() + user.getAge());
+        }
+       /* final CountDownLatch latch= new CountDownLatch(users.size());//使用java并发库concurrent
         for (User user : users) {
             executorService.submit(()->{
-                try {
-                    TimeUnit.SECONDS.sleep(1);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                synchronized (this){
-                    System.out.println(this);
-                    userVo.setAgeNum(userVo.getAgeNum() + user.getAge());
-                }
-                latch.countDown();
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    synchronized (this){
+                        userVo.setAgeNum(userVo.getAgeNum() + user.getAge());
+                    }
+                    latch.countDown();
             });
-        }
-        try {
+        }*/
+       /* try {
             latch.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }*/
+            BeanUtils.copyProperties(userById, userVo);
+            return userVo;
+    }
+
+
+    @Override
+    public List<UserVo> getListUserVo1(){
+        List<Integer> ids = idList();
+        List<UserVo> listUserVo = new ArrayList<>();
+        for (Integer id : ids) {
+                UserVo userVoInfo = getUserVoInfo(id);
+                listUserVo.add(userVoInfo);
         }
-        BeanUtils.copyProperties(userById,userVo);
-        return userVo;
+        return listUserVo;
     }
 }
